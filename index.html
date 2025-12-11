@@ -20,6 +20,7 @@
 
   <!-- Map credit -->
   <script type="text/javascript" src="dist/leaflet-control-credits.js"></script>
+  <link rel="stylesheet" href="dist/leaflet-control-credits.css" />
 
   <style>
   body { margin:0; padding:0; }
@@ -155,55 +156,69 @@
      * - Binds a popup to the track using the internal GPX name (feature.properties.name).
      * - Adds click highlight behavior and simple tooltip on hover.
      */
-    function loadGPX(filePath, targetLayer) {
-      // omnivore.gpx returns a layerGroup (it fires 'ready' when parsed)
-      const gpxLayer = omnivore.gpx(filePath);
+function loadGPX(filePath, targetLayer) {
+  // omnivore.gpx returns a layerGroup (fires 'ready' when parsed)
+  const gpxLayer = omnivore.gpx(filePath);
 
-      gpxLayer.on('ready', function() {
-        // Iterate through all sub-layers (tracks/segments/points)
-        this.eachLayer(function(layer) {
-          // Try to read the name from GPX internals:
-          const name = (layer.feature && layer.feature.properties && layer.feature.properties.name) ? layer.feature.properties.name : filePath;
-          // Bind popup using internal name
-          layer.bindPopup('<h1>' + name + '</h1>', { maxWidth: 400 });
+  gpxLayer.on('ready', function() {
 
-          // Optional: small tooltip on hover (not permanent)
-          layer.on('mouseover', function() {
-            if (!layer._tooltip) layer.bindTooltip(name, { direction: 'center' }).openTooltip();
-          });
-          layer.on('mouseout', function() {
-            if (layer._tooltip) layer.closeTooltip();
-          });
+    this.eachLayer(function(layer) {
 
-          // Optional: click highlight (simple)
-          layer.on('click', function() {
-            // set style highlight if it's a polyline
-            if (layer.setStyle) {
-              layer.setStyle({ color: '#70F3FF', weight: 5 });
-              // revert after short delay (or you can implement a full reset)
-              setTimeout(function() {
-                if (layer.setStyle) layer.setStyle({ color: '#e41a1c', weight: 2 });
-              }, 3000);
-            }
-            layer.openPopup();
-          });
+      // ----- BASELINE STYLE (apply to all polylines) -----
+      if (layer.setStyle) {
+        layer.setStyle({
+          color: '#e41a1c',      // <-- default line color
+          weight: 2,             // <-- default width
+          opacity: 1,
         });
+      }
+      // ---------------------------------------------------
 
-        // Add the parsed GPX content to the target layer group
-        targetLayer.addLayer(this);
+      // Try to read the name from GPX internals:
+      const name = (layer.feature && layer.feature.properties && layer.feature.properties.name)
+        ? layer.feature.properties.name
+        : filePath;
+
+      // Popup
+      layer.bindPopup('<h1>' + name + '</h1>', { maxWidth: 400 });
+
+      // Tooltip (simple hover)
+      layer.on('mouseover', function() {
+        if (!layer._tooltip) layer.bindTooltip(name, { direction: 'center' }).openTooltip();
+      });
+      layer.on('mouseout', function() {
+        if (layer._tooltip) layer.closeTooltip();
       });
 
-      gpxLayer.on('error', function(err) {
-        // Helpful debug note in console if something fails loading
-        console.warn('Failed loading GPX:', filePath, err);
+      // Click highlight
+      layer.on('click', function() {
+        if (layer.setStyle) {
+          layer.setStyle({ color: '#70F3FF', weight: 5 });
+
+          // Restore baseline style after 3s
+          setTimeout(function() {
+            layer.setStyle({ color: '#e41a1c', weight: 2 });
+          }, 3000);
+        }
+
+        layer.openPopup();
       });
 
-      // Start loading (omnivore auto-loads once created, but ensure it's returned)
-      return gpxLayer;
-    }
+    });
 
-    // Bulk-load GPX files into Hikes (change to other layer groups if desired)
-    gpxFiles.forEach(function(fp) { loadGPX(fp, Bikes); });
+    // Add parsed GPX to target layer group
+    targetLayer.addLayer(this);
+  });
+
+  gpxLayer.on('error', function(err) {
+    console.warn('Failed loading GPX:', filePath, err);
+  });
+
+  return gpxLayer;
+}
+
+// Load all GPX files
+gpxFiles.forEach(fp => loadGPX(fp, Bikes));
 
 
 
@@ -227,5 +242,6 @@
   </script>
 </body>
 </html>
+
 
 
