@@ -12,10 +12,6 @@
   <!-- Omnivore for GPX/KML/CSV reading -->
   <script src="https://api.tiles.mapbox.com/mapbox.js/plugins/leaflet-omnivore/v0.3.1/leaflet-omnivore.min.js"></script>
 
-  <!-- Optional: leaflet-deflate if you want to keep your deflate behavior -->
-  <link rel="stylesheet" href="dist/leaflet-list-markers.css" />
-  <script src="dist/L.Deflate.js"></script>
-
   <!-- jQuery + PapaParse for CSV marker placeholders -->
   <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.0/papaparse.min.js"></script>
@@ -50,4 +46,177 @@
     };
 
     const map = L.map('map', {
-      center: [40.0, -3.7], // centered roughly over Spain; a
+      center: [40.0, -3.7], // centered roughly over Spain; adjust as needed
+      zoom: 7,
+      layers: [baseLayers['Terrain']]
+    });
+
+    L.control.layers(baseLayers, null, { collapsed: false }).addTo(map);
+
+    // ------------------------------
+    // Layer groups (placeholders)
+    // ------------------------------
+    // These exist so users can toggle them. They currently read CSV placeholders.
+    const Hikes = L.layerGroup().addTo(map);        // GPX tracks will be added here
+    const Camps = L.layerGroup().addTo(map);        // placeholder - update CSV path
+    const Cabins = L.layerGroup().addTo(map);       // placeholder - update CSV path
+    const POIs = L.layerGroup().addTo(map);         // placeholder - update CSV path
+    const Bears = L.layerGroup().addTo(map);        // example static markers retained
+
+    // Add overlays to the control
+    const overlays = {
+      'Tracks (GPX)': Hikes,
+      'Camps (CSV placeholder)': Camps,
+      'Cabins (CSV placeholder)': Cabins,
+      'POIs (CSV placeholder)': POIs,
+      'Bears (example markers)': Bears
+    };
+    L.control.layers(baseLayers, overlays, {collapsed:false}).addTo(map);
+
+    // ------------------------------
+    // Icons (update icon URLs if you have your own)
+    // ------------------------------
+    const Icon = L.Icon.extend({ options: { iconSize: [32,32], iconAnchor: [16,32], popupAnchor: [0,-32] }});
+    const CampIcon = new Icon({ iconUrl: 'Icons/tent.png' });
+    const CabinIcon = new Icon({ iconUrl: 'Icons/cabin.png' });
+    const POIIcon = new Icon({ iconUrl: 'Icons/point-of-interest.png' });
+    const BearIcon = new Icon({ iconUrl: 'Icons/bear.png' });
+
+    // ------------------------------
+    // GPX loading
+    // ------------------------------
+    // NOTE: GitHub Pages does NOT support directory listings.
+    // You gave filenames, so we're using a hard-coded array of GPX files.
+    // If you move to a host that supports directory listing, you can fetch the directory
+    // and dynamically build this array instead.
+    const gpxFiles = [
+      'GPX/Day1.gpx',
+      'GPX/Day2.gpx',
+      'GPX/Day3.gpx',
+      'GPX/Day4.gpx',
+      'GPX/Day5.gpx',
+      'GPX/Day6.gpx',
+      'GPX/Day7.gpx',
+      'GPX/Day8.gpx',
+      'GPX/Day9.gpx'
+    ];
+
+    /**
+     * loadGPX(filePath, targetLayer)
+     * - Uses omnivore to load a GPX file and add it to the provided targetLayer.
+     * - Binds a popup to the track using the internal GPX name (feature.properties.name).
+     * - Adds click highlight behavior and simple tooltip on hover.
+     */
+    function loadGPX(filePath, targetLayer) {
+      // omnivore.gpx returns a layerGroup (it fires 'ready' when parsed)
+      const gpxLayer = omnivore.gpx(filePath);
+
+      gpxLayer.on('ready', function() {
+        // Iterate through all sub-layers (tracks/segments/points)
+        this.eachLayer(function(layer) {
+          // Try to read the name from GPX internals:
+          const name = (layer.feature && layer.feature.properties && layer.feature.properties.name) ? layer.feature.properties.name : filePath;
+          // Bind popup using internal name
+          layer.bindPopup('<h1>' + name + '</h1>', { maxWidth: 400 });
+
+          // Optional: small tooltip on hover (not permanent)
+          layer.on('mouseover', function() {
+            if (!layer._tooltip) layer.bindTooltip(name, { direction: 'center' }).openTooltip();
+          });
+          layer.on('mouseout', function() {
+            if (layer._tooltip) layer.closeTooltip();
+          });
+
+          // Optional: click highlight (simple)
+          layer.on('click', function() {
+            // set style highlight if it's a polyline
+            if (layer.setStyle) {
+              layer.setStyle({ color: '#70F3FF', weight: 5 });
+              // revert after short delay (or you can implement a full reset)
+              setTimeout(function() {
+                if (layer.setStyle) layer.setStyle({ color: '#e41a1c', weight: 2 });
+              }, 3000);
+            }
+            layer.openPopup();
+          });
+        });
+
+        // Add the parsed GPX content to the target layer group
+        targetLayer.addLayer(this);
+      });
+
+      gpxLayer.on('error', function(err) {
+        // Helpful debug note in console if something fails loading
+        console.warn('Failed loading GPX:', filePath, err);
+      });
+
+      // Start loading (omnivore auto-loads once created, but ensure it's returned)
+      return gpxLayer;
+    }
+
+    // Bulk-load GPX files into Hikes (change to other layer groups if desired)
+    gpxFiles.forEach(function(fp) { loadGPX(fp, Hikes); });
+
+    // ------------------------------
+    // Placeholder CSV-powered markers
+    // ------------------------------
+    // These CSVs are placeholders. Replace the CSV paths and column names
+    // to point to your real marker data files when available.
+    function loadCSVMarkers(csvPath, layerGroup, icon, popupTemplateFn) {
+      $.get(csvPath).done(function(csvString) {
+        const rows = Papa.parse(csvString, { header: true, dynamicTyping: true }).data;
+        rows.forEach(function(row) {
+          // Expected columns: Latitude, Longitude, Name, PIC_URL
+          if (!row || row.Latitude == null || row.Longitude == null) return;
+          const popupHtml = popupTemplateFn ? popupTemplateFn(row) : ('<h1>' + (row.Name || '') + '</h1>');
+          L.marker([row.Latitude, row.Longitude], { icon: icon })
+            .bindPopup(popupHtml, { maxWidth: 400 })
+            .addTo(layerGroup);
+        });
+      }).fail(function() {
+        // If CSV isn't present yet, do nothing — the layer will be empty.
+        console.info('CSV not found (placeholder):', csvPath);
+      });
+    }
+
+    // Example: Load placeholder CSVs (edit these CSV file paths later)
+    loadCSVMarkers('CSV/Camps.csv', Camps, CampIcon, function(r) {
+      return '<h1>' + (r.Name||'Camp') + '</h1>' +
+             (r.PIC_URL ? ("<a href='" + r.PIC_URL + "'><img class='popupImage' src='" + r.PIC_URL + "' onerror='this.style.display=\"none\"'/></a>") : '');
+    });
+
+    loadCSVMarkers('CSV/Cabins.csv', Cabins, CabinIcon, function(r) {
+      return '<h1>' + (r.Name||'Cabin') + '</h1>' +
+             (r.PIC_URL ? ("<a href='" + r.PIC_URL + "'><img class='popupImage' src='" + r.PIC_URL + "' onerror='this.style.display=\"none\"'/></a>") : '');
+    });
+
+    loadCSVMarkers('CSV/POI.csv', POIs, POIIcon, function(r) {
+      return '<h1>' + (r.Name||'POI') + '</h1>' +
+             (r.PIC_URL ? ("<a href='" + r.PIC_URL + "'><img class='popupImage' src='" + r.PIC_URL + "' onerror='this.style.display=\"none\"'/></a>") : '');
+    });
+
+    // ------------------------------
+    // Example static markers (kept from original)
+    // ------------------------------
+    L.marker([40.4168, -3.7038], { icon: BearIcon }).addTo(Bears).bindPopup('<h1>Example Bear Marker (Madrid)</h1>');
+
+    // ------------------------------
+    // Helpful notes for you
+    // ------------------------------
+    // - GPX name used for popups: layer.feature.properties.name (this is read from within the GPX file)
+    // - If your GPX files contain <trk><name> or <rte><name>, omnivore/gpx will expose them as feature.properties.name
+    // - If you move away from GitHub Pages to a host that exposes directory listings:
+    //     replace the hard-coded gpxFiles array with a fetch of the directory listing (and build the array)
+    // - Update the CSV file paths above when you have real CSVs. The loadCSVMarkers function expects
+    //     columns: Latitude, Longitude, Name, PIC_URL (adjust as required)
+    // - To change which layer a GPX file goes into (e.g., Bikes instead of Hikes), call loadGPX(fp, Bikes)
+    // - If you want different default styles per activity, apply layer.eachLayer(...) and set polyline style
+    //
+    // Example: convert a GPX into a 'Bikes' layer with a different style
+    // loadGPX('GPX/bike_route.gpx', Bikes).on('ready', function() {
+    //   this.eachLayer(function(l){ if (l.setStyle) l.setStyle({color:'#ff7f00', weight:2}); });
+    // });
+
+  </script>
+</body>
+</html>
