@@ -2,9 +2,11 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>Espana 2025</title>
+  <title>España 2025</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-
+  
+  <!-- Pacifico font -->
+  <link href='https://fonts.googleapis.com/css?family=Pacifico' rel='stylesheet'>
   <!-- Leaflet -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
@@ -17,78 +19,119 @@
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.0/papaparse.min.js"></script>
 
   <style>
-    html,body,#map { height: 100%; margin: 0; padding: 0; }
-    #title-pane {
-      position: absolute;
-      left: 0; right: 0; top: 12px;
-      text-align: center;
-      z-index: 800;
-      font-family: "Pacifico", Arial;
-      font-size: 30px;
-      color: white;
-      text-shadow: 2px 2px 10px rgba(0,0,0,0.8);
-      pointer-events: none;
-    }
-    .popupImage { max-width: 200px; display:block; }
+  body { margin:0; padding:0; }
+  #map { position: absolute; top:0; bottom:0; right:0; left:0; }
+  #map-title { position: relative; margin-top: 10px; margin-left: 50px; float: left; background: white; border: 2px solid rgba(0,0,0,0.2); padding: 6px 8px; font-family: 'Brush Script MT', cursive; font-weight: bold; font-size: 24px; z-index: 800; }
+	  
+  h1.popup {
+      color: #191900;
+      text-align: left;
+      font-family: 'Roboto Slab';
+      font-size: 12px;
+      margin-top: 0;
+      margin-bottom: 0;
+  }
+ 
+  p.popup {
+    margin-top: 0;
+    margin-bottom: 0;
+  }
+  /* Make the tooltip background slightly transparent and text bold */
+  .leaflet-tooltip {
+      background-color: rgba(0, 0, 0, 0.7) !important; /* Slightly transparent black background */
+      color: white; /* White text */
+      font-size: 8px;
+      font-weight: bold; /* Bold text */
+      border: 2px solid white; /* Optional: Add a white border */
+      pointer-events: none; /* Ensure the tooltip does not block interactions */
+  }
+  /* Increase padding inside the tooltip */
+  .leaflet-tooltip-content {
+      padding: 5px 5px; /* Adjust padding as needed */
+  }
+	  
+  #title-pane {
+  position: absolute;
+  position: absolute;
+  margin-left: auto;
+  margin-right: auto;
+  left: 0;
+  right: 0;
+  text-align: center;
+  z-index: 400;
+  font-family: "PACIFICO";
+  font-size: 30px;
+  color: white;
+  text-shadow: 2px 2px 20px red;
+  }
+
+  #ActivitySelect {
+  position: absolute;
+  z-index: 400;
+  }	  
+	  
+  .popupImage {
+    max-width: 200px;
+  }
+
+  @media (hover: none) {
+    .leaflet-tooltip-pane { display: none; }
+  }
   </style>
 </head>
 <body>
   <div id="map"></div>
-  <div id="title-pane">Espana 2025</div>
+  <div id="title-pane"><p>España 2025</p></div>
 
   <script>
     // ------------------------------
     // Basic map + base layers
     // ------------------------------
-    const baseLayers = {
-      'Terrain': L.tileLayer('http://{s}.google.com/vt/lyrs=p&x={x}&y={y}&z={z}', { maxZoom: 20, subdomains:['mt0','mt1','mt2','mt3'] }),
-      'Imagery': L.tileLayer('http://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 20 })
+    // Function to detect if the device is a touch device
+    function isTouchDevice() {
+      return ('ontouchstart' in window || navigator.maxTouchPoints > 0) && window.innerWidth <= 1024;
+    }
+	  
+    var Icon = L.Icon.extend({
+      options: {
+        iconSize:     [32, 32],
+	iconAnchor:   [16, 32],
+	popupAnchor:  [0, -32]
+	}
+    });
+	
+    var baseLayers = {
+	'Terrain': L.tileLayer('http://{s}.google.com/vt/lyrs=p&x={x}&y={y}&z={z}',{
+		maxZoom: 20,
+		subdomains:['mt0','mt1','mt2','mt3']
+	}),
+	'Imagery': L.tileLayer('http://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{
+	    maxZoom:20
+	})
     };
 
     const map = L.map('map', {
       center: [40.0, -3.7], // centered roughly over Spain; adjust as needed
-      zoom: 7,
+      zoom: 6.5,
+      zoomControl: false,
+      zoomSnap: 0.25,
       layers: [baseLayers['Terrain']]
     });
 
-    L.control.layers(baseLayers, null, { collapsed: false }).addTo(map);
+    var layerControl = L.control.layers(baseLayers).addTo(map);
 
-    // ------------------------------
-    // Layer groups (placeholders)
-    // ------------------------------
-    // These exist so users can toggle them. They currently read CSV placeholders.
-    const Hikes = L.layerGroup().addTo(map);        // GPX tracks will be added here
-    const Camps = L.layerGroup().addTo(map);        // placeholder - update CSV path
-    const Cabins = L.layerGroup().addTo(map);       // placeholder - update CSV path
-    const POIs = L.layerGroup().addTo(map);         // placeholder - update CSV path
-    const Bears = L.layerGroup().addTo(map);        // example static markers retained
-
-    // Add overlays to the control
-    const overlays = {
-      'Tracks (GPX)': Hikes,
-      'Camps (CSV placeholder)': Camps,
-      'Cabins (CSV placeholder)': Cabins,
-      'POIs (CSV placeholder)': POIs,
-      'Bears (example markers)': Bears
-    };
-    L.control.layers(baseLayers, overlays, {collapsed:false}).addTo(map);
-
-    // ------------------------------
-    // Icons (update icon URLs if you have your own)
-    // ------------------------------
-    const Icon = L.Icon.extend({ options: { iconSize: [32,32], iconAnchor: [16,32], popupAnchor: [0,-32] }});
-    const CampIcon = new Icon({ iconUrl: 'Icons/tent.png' });
-    const CabinIcon = new Icon({ iconUrl: 'Icons/cabin.png' });
-    const POIIcon = new Icon({ iconUrl: 'Icons/point-of-interest.png' });
-    const BearIcon = new Icon({ iconUrl: 'Icons/bear.png' });
+    L.controlCredits({
+	    imageurl: 'Icons/logo.png',
+	    tooltip: 'Brad Garrow',
+	    imagealt: 'None',
+	    width: '30px',
+	    height: '30px',
+	    expandcontent: 'Mapping by <br/>Brad Garrow',
+    }).addTo(map);	
 
     // ------------------------------
     // GPX loading
     // ------------------------------
-    // NOTE: GitHub Pages does NOT support directory listings.
-    // You gave filenames, so we're using a hard-coded array of GPX files.
-    // If you move to a host that supports directory listing, you can fetch the directory
-    // and dynamically build this array instead.
     const gpxFiles = [
       'GPX/Day1.gpx',
       'GPX/Day2.gpx',
@@ -157,48 +200,7 @@
     // Bulk-load GPX files into Hikes (change to other layer groups if desired)
     gpxFiles.forEach(function(fp) { loadGPX(fp, Hikes); });
 
-    // ------------------------------
-    // Placeholder CSV-powered markers
-    // ------------------------------
-    // These CSVs are placeholders. Replace the CSV paths and column names
-    // to point to your real marker data files when available.
-    function loadCSVMarkers(csvPath, layerGroup, icon, popupTemplateFn) {
-      $.get(csvPath).done(function(csvString) {
-        const rows = Papa.parse(csvString, { header: true, dynamicTyping: true }).data;
-        rows.forEach(function(row) {
-          // Expected columns: Latitude, Longitude, Name, PIC_URL
-          if (!row || row.Latitude == null || row.Longitude == null) return;
-          const popupHtml = popupTemplateFn ? popupTemplateFn(row) : ('<h1>' + (row.Name || '') + '</h1>');
-          L.marker([row.Latitude, row.Longitude], { icon: icon })
-            .bindPopup(popupHtml, { maxWidth: 400 })
-            .addTo(layerGroup);
-        });
-      }).fail(function() {
-        // If CSV isn't present yet, do nothing — the layer will be empty.
-        console.info('CSV not found (placeholder):', csvPath);
-      });
-    }
 
-    // Example: Load placeholder CSVs (edit these CSV file paths later)
-    loadCSVMarkers('CSV/Camps.csv', Camps, CampIcon, function(r) {
-      return '<h1>' + (r.Name||'Camp') + '</h1>' +
-             (r.PIC_URL ? ("<a href='" + r.PIC_URL + "'><img class='popupImage' src='" + r.PIC_URL + "' onerror='this.style.display=\"none\"'/></a>") : '');
-    });
-
-    loadCSVMarkers('CSV/Cabins.csv', Cabins, CabinIcon, function(r) {
-      return '<h1>' + (r.Name||'Cabin') + '</h1>' +
-             (r.PIC_URL ? ("<a href='" + r.PIC_URL + "'><img class='popupImage' src='" + r.PIC_URL + "' onerror='this.style.display=\"none\"'/></a>") : '');
-    });
-
-    loadCSVMarkers('CSV/POI.csv', POIs, POIIcon, function(r) {
-      return '<h1>' + (r.Name||'POI') + '</h1>' +
-             (r.PIC_URL ? ("<a href='" + r.PIC_URL + "'><img class='popupImage' src='" + r.PIC_URL + "' onerror='this.style.display=\"none\"'/></a>") : '');
-    });
-
-    // ------------------------------
-    // Example static markers (kept from original)
-    // ------------------------------
-    L.marker([40.4168, -3.7038], { icon: BearIcon }).addTo(Bears).bindPopup('<h1>Example Bear Marker (Madrid)</h1>');
 
     // ------------------------------
     // Helpful notes for you
@@ -220,3 +222,4 @@
   </script>
 </body>
 </html>
+
