@@ -253,11 +253,11 @@
 	  
     //Function for binding popup and highlighting on click  
     function forEachFeature(feature, layer) {
-      layer.bindPopup('<h1>'+feature.properties.name+'</h1>');
+      layer.bindPopup('<h1>'+feature.properties.Name+'</h1>');
 	    
       // Check if the device is a touch device
       if (!isTouchDevice()) {
-        layer.bindTooltip('<h1>'+feature.properties.name+'</h1>', {
+        layer.bindTooltip('<h1>'+feature.properties.Name+'</h1>', {
 	      direction: 'center',  // Tooltip appears in the center of the line
               offset: L.point(0, 0), // Centered offset
               permanent: false, // Tooltip only appears on hover
@@ -382,6 +382,7 @@
   </script>
 </body>
 </html>
+
 
 
 
