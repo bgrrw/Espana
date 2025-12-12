@@ -24,6 +24,8 @@
 
   <!-- Javascript Variable of tracks from geojson -->
   <script src="Train.js" type="text/javascript"></script>
+  <script src="Line2.js" type="text/javascript"></script>
+  <script src="Line9.js" type="text/javascript"></script>
 	
   <style>
   body { margin:0; padding:0; }
@@ -139,12 +141,17 @@
 
 	var Tracks = {
 	  'Biking': L.layerGroup(),
-	  'Train': L.layerGroup()
+	  'Train': L.layerGroup(),
+	  'Line2': L.layerGroup(),
+	  'Line9': L.layerGroup()
+		
 	};
 
     // Keep references to the groups we will populate programmatically
     var BikeLayer = Tracks['Biking'];
 	var TrainLayer = Tracks['Train'];
+	var Line2Layer = Tracks['Line2'];
+	var Line9Layer = Tracks['Line9'];
     var CampsLayer = Layers['Camps <img src="Icons/accomodation.png" width="18" style="vertical-align:middle; margin-left:6px;">'];
     var AccommodationLayer = Layers['Accommodation <img src="Icons/accomodation.png" width="18" style="vertical-align:middle; margin-left:6px;">'];
     var AttractionsLayer = Layers['Attractions <img src="Icons/accomodation.png" width="18" style="vertical-align:middle; margin-left:6px;">'];
@@ -249,6 +256,18 @@
         color: '#ff7f00',//'#FFA500',
 		weight: 2
     }};
+
+	function Line2style(feature) {
+    return {
+        color: '#EB2F29',//'#FFA500',
+		weight: 2
+    }};
+
+	function Line9style(feature) {
+    return {
+        color: '#914499',//'#FFA500',
+		weight: 2
+    }};
     
 	  
     //Function for binding popup and highlighting on click  
@@ -275,11 +294,23 @@
       layer.on("click", function (e) {
 	layer.bringToFront();
 	TrainTracks.setStyle(Trainstyle);
+	Line2Tracks.setStyle(Line2style);
+	Line9Tracks.setStyle(Line9style);
         layer.setStyle(highlight);  //highlights selected.
         });
         };
 
     var TrainTracks = L.geoJSON(TrainTracks, {
+      style: Trainstyle,
+      onEachFeature: forEachFeature
+    }).addTo(TrainLayer);
+
+	var Line2Tracks = L.geoJSON(Line2, {
+      style: Trainstyle,
+      onEachFeature: forEachFeature
+    }).addTo(TrainLayer);
+
+	var Line9Tracks = L.geoJSON(Line9, {
       style: Trainstyle,
       onEachFeature: forEachFeature
     }).addTo(TrainLayer);
@@ -382,6 +413,7 @@
   </script>
 </body>
 </html>
+
 
 
 
