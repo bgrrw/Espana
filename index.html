@@ -116,12 +116,16 @@
 
 	var EspanaPoints = L.layerGroup()
 
+	var overlays = {
+	'Accomodation<img src="Icons/accomodation.png" style="width:32px;height:32px;">': EspanaPoints
+    };
+
     const map = L.map('map', {
       center: [40.0, -3.7], // centered roughly over Spain; adjust as needed
       zoom: 6.5,
       zoomControl: false,
       zoomSnap: 0.25,
-      layers: [baseLayers['Terrain']]
+      layers: [baseLayers['Terrain'],EspanaPoints]
     });
 
     var layerControl = L.control.layers(baseLayers,EspanaPoints).addTo(map);
@@ -229,7 +233,7 @@ gpxFiles.forEach(fp => loadGPX(fp, Bikes));
 // Point Layes
     var CampIcon = new Icon({iconUrl: 'tent.png'});
     var StartIcon = new Icon({iconUrl: 'home.png'});
-    var AccomodationIcon = new Icon({iconUrl: 'accomodation.png'});
+    var AccomodationIcon = new Icon({iconUrl: 'Icons/accomodation.png'});
     var POIICon = new Icon({iconUrl: 'point-of-interest.png'});
 
 // Read markers data from data.csv
@@ -291,6 +295,7 @@ gpxFiles.forEach(fp => loadGPX(fp, Bikes));
   </script>
 </body>
 </html>
+
 
 
 
