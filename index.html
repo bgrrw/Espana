@@ -122,7 +122,7 @@
       layers: [baseLayers['Terrain']]
     });
 
-    var layerControl = L.control.layers(baseLayers).addTo(map);
+    var layerControl = L.control.layers(baseLayers,Markers).addTo(map);
 
     L.controlCredits({
 	    imageurl: 'Icons/logo.png',
@@ -220,8 +220,55 @@ function loadGPX(filePath, targetLayer) {
 // Load all GPX files
 gpxFiles.forEach(fp => loadGPX(fp, Bikes));
 
+//---------
+// POINTS
+//---------	  
+	  
+// Point Layes
+    var CampIcon = new Icon({iconUrl: 'tent.png'});
+    var StartIcon = new Icon({iconUrl: 'home.png'});
+    var AccomodationIcon = new Icon({iconUrl: 'accomodation.png'});
+    var POIICon = new Icon({iconUrl: 'point-of-interest.png'});
 
-
+// Read markers data from data.csv
+    $.get('EspañaPoints.csv', function(csvString) {
+    // Use PapaParse to convert string to array of objects
+      var data = Papa.parse(csvString, {header: true, dynamicTyping: true}).data;
+      // For each row in data, create a marker and add it to the map
+      // For each row, columns `Latitude`, `Longitude`, and `Title` are required
+      for (var i in data) {
+        var row = data[i];
+        if (row.Point_Type == 'Camp') {
+            var icon = CampIcon;
+	    	var popuptxt = "<h1>" + row.Name +"</h1><a href='" + row.PIC_URL + "'><img src='" + row.PIC_URL + "'" + " onerror=this.style.display='none' class=popupImage " + "/>"
+        } else if (row.Point_Type == 'Start') {
+            var icon = StartIcon;
+	    	var popuptxt = '<video width="320" controls autoplay><source src="RoadTrip.mp4"></source></video>'
+	  	} else if (row.Point_Type == 'Attraction') {
+	    	var icon = POIICon;
+	    	var popuptxt = "<h1>" + row.Name +"</h1><a href='" + row.PIC_URL + "'><img src='" + row.PIC_URL + "'" + " onerror=this.style.display='none' class=popupImage " + "/>"
+	  	} else if (row.Point_Type == 'Accommodation') {
+	    	var icon = AccomodationIcon;
+	    	var popuptxt = "<h1>" + row.Name +"</h1><a href='" + row.PIC_URL + "'><img src='" + row.PIC_URL + "'" + " onerror=this.style.display='none' class=popupImage " + "/>"
+	  	} else if (row.Point_Type == 'Border') {
+	    	var icon = BorderIcon;
+	    	var popuptxt = "<h1>" + row.Name +"</h1><a href='" + row.PIC_URL + "'><img src='" + row.PIC_URL + "'" + " onerror=this.style.display='none' class=popupImage " + "/>"
+        } else {
+	    	var icon = EndIcon;
+	    	var popuptxt = "<h1>" + row.Name +"</h1><a href='" + row.PIC_URL + "'><img src='" + row.PIC_URL + "'" + " onerror=this.style.display='none' class=popupImage " + "/>"
+	  	};   
+	      
+      var Markers = L.marker([row.Latitude, row.Longitude], {
+	  	icon: icon,
+	  	opacity: 1
+      }).bindPopup(
+	  	popuptxt, {
+	   		maxWidth: "auto"
+        }).addTo(xCanadaPoints);		
+        Markers.addTo(map);
+      }
+    });
+	  
     // ------------------------------
     // Helpful notes for you
     // ------------------------------
@@ -242,6 +289,7 @@ gpxFiles.forEach(fp => loadGPX(fp, Bikes));
   </script>
 </body>
 </html>
+
 
 
 
