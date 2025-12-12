@@ -114,6 +114,8 @@
 	})
     };
 
+	var EspanaPoints = L.layerGroup()
+
     const map = L.map('map', {
       center: [40.0, -3.7], // centered roughly over Spain; adjust as needed
       zoom: 6.5,
@@ -122,7 +124,7 @@
       layers: [baseLayers['Terrain']]
     });
 
-    var layerControl = L.control.layers(baseLayers,Markers).addTo(map);
+    var layerControl = L.control.layers(baseLayers,EspanaPoints).addTo(map);
 
     L.controlCredits({
 	    imageurl: 'Icons/logo.png',
@@ -264,7 +266,7 @@ gpxFiles.forEach(fp => loadGPX(fp, Bikes));
       }).bindPopup(
 	  	popuptxt, {
 	   		maxWidth: "auto"
-        }).addTo(xCanadaPoints);		
+        }).addTo(EspanaPoints);		
         Markers.addTo(map);
       }
     });
@@ -289,6 +291,7 @@ gpxFiles.forEach(fp => loadGPX(fp, Bikes));
   </script>
 </body>
 </html>
+
 
 
 
