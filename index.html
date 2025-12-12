@@ -167,7 +167,7 @@
       zoom: 6.5,
       zoomControl: false,
       zoomSnap: 0.25,
-      layers: [ baseLayers['Terrain'], BikeLayer, TrainLayer, AccommodationLayer]
+      layers: [ baseLayers['Terrain'], BikeLayer, TrainLayer, Line2Layer, Line9Layer, AccommodationLayer]
     });
 
     // Layer control needs an object for overlays (the Labels in the Layers object are keys)
@@ -306,12 +306,12 @@
     }).addTo(TrainLayer);
 
 	var Line2Tracks = L.geoJSON(Line2, {
-      style: Trainstyle,
+      style: Line2style,
       onEachFeature: forEachFeature
     }).addTo(TrainLayer);
 
 	var Line9Tracks = L.geoJSON(Line9, {
-      style: Trainstyle,
+      style: Line9style,
       onEachFeature: forEachFeature
     }).addTo(TrainLayer);
 
@@ -413,6 +413,7 @@
   </script>
 </body>
 </html>
+
 
 
 
