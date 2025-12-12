@@ -22,6 +22,9 @@
   <script type="text/javascript" src="dist/leaflet-control-credits.js"></script>
   <link rel="stylesheet" href="dist/leaflet-control-credits.css" />
 
+  <!-- Javascript Variable of tracks from geojson -->
+  <script src="Train.js" type="text/javascript"></script>
+	
   <style>
   body { margin:0; padding:0; }
   #map { position: absolute; top:0; bottom:0; right:0; left:0; }
@@ -126,7 +129,6 @@
     // Overlays: separate layer groups per type (Option B)
     // ------------------------------
     var Layers = {
-      'Routes': L.layerGroup(),
       'Camps <img src="Icons/accomodation.png" width="18" style="vertical-align:middle; margin-left:6px;">': L.layerGroup(),
       'Accommodation <img src="Icons/accomodation.png" width="18" style="vertical-align:middle; margin-left:6px;">': L.layerGroup(),
       'Attractions <img src="Icons/accomodation.png" width="18" style="vertical-align:middle; margin-left:6px;">': L.layerGroup(),
@@ -136,7 +138,8 @@
     };
 
     // Keep references to the groups we will populate programmatically
-    var RoutesLayer = Layers['Routes'];
+    var BikeLayer = Layers['Biking'];
+	var TrainLayer = Layers['Train'];
     var CampsLayer = Layers['Camps <img src="Icons/accomodation.png" width="18" style="vertical-align:middle; margin-left:6px;">'];
     var AccommodationLayer = Layers['Accommodation <img src="Icons/accomodation.png" width="18" style="vertical-align:middle; margin-left:6px;">'];
     var AttractionsLayer = Layers['Attractions <img src="Icons/accomodation.png" width="18" style="vertical-align:middle; margin-left:6px;">'];
@@ -152,7 +155,7 @@
       zoom: 6.5,
       zoomControl: false,
       zoomSnap: 0.25,
-      layers: [ baseLayers['Terrain'], RoutesLayer, CampsLayer, AccommodationLayer, AttractionsLayer, BordersLayer, StartsEndsLayer, OtherLayer ]
+      layers: [ baseLayers['Terrain'], BikeLayer, TrainLayer,CampsLayer, AccommodationLayer, AttractionsLayer, BordersLayer, StartsEndsLayer, OtherLayer ]
     });
 
     // Layer control needs an object for overlays (the Labels in the Layers object are keys)
@@ -222,8 +225,75 @@
     }
 
     // Load GPX files into the Routes layer
-    gpxFiles.forEach(fp => loadGPX(fp, RoutesLayer));
+    gpxFiles.forEach(fp => loadGPX(fp, BikeLayer));
 
+	//------------------------------------------
+	// Original  Method of adding JSONs to map
+	//-----------------------------------------
+
+	  
+    // Line Styles
+    var highlight = {
+      'color': '#70F3FF',
+      'weight': 3,
+      'opacity': 1,	
+    };	  
+
+    function Trainstyle(feature) {
+    return {
+        color: '#ff7f00',//'#FFA500',
+		weight: 2
+    }};
+    
+	  
+    //Function for binding popup and highlighting on click  
+    function forEachFeature(feature, layer) {
+      layer.bindPopup('<h1>'+feature.properties.name+'</h1>');
+	    
+      // Check if the device is a touch device
+      if (!isTouchDevice()) {
+        layer.bindTooltip('<h1>'+feature.properties.name+'</h1>', {
+	      direction: 'center',  // Tooltip appears in the center of the line
+              offset: L.point(0, 0), // Centered offset
+              permanent: false, // Tooltip only appears on hover
+              sticky: true, // Tooltip remains open when mouse is moved over it
+              interactive: false, // Allows interaction with the tooltip
+          });
+      };
+      // Increase the sensitivity area for hovering (wider hover area)
+      layer.on('mouseover', function(e) {
+          layer.setStyle({ weight: 6 });  // Temporarily increase line weight on hover
+      });
+      layer.on('mouseout', function(e) {
+          layer.setStyle({ weight: 2 });  // Revert line weight when not hovering
+      });
+      layer.on("click", function (e) {
+	layer.bringToFront();
+	TrainTracks.setStyle(Trainstyle);
+        layer.setStyle(highlight);  //highlights selected.
+        });
+        };
+
+    var TrainTracks = L.geoJSON(Train, {
+      style: Trainstyle,
+      onEachFeature: forEachFeature
+    }).addTo(TrainLayer);
+
+
+    ////////////////////////	  
+    //Interaction Functions
+    ////////////////////////
+
+    function onMapClick(e) {
+	TrainTracks.setStyle(Trainstyle);
+    }
+    map.on('click', onMapClick);
+
+    map.on('almost:click', function (e) {
+      var layer = e.layer;
+      layer.openPopup();
+    });
+	  
 	//---------
 	// POINTS
 	//---------	  
@@ -307,6 +377,7 @@
   </script>
 </body>
 </html>
+
 
 
 
