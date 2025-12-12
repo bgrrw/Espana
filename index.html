@@ -125,7 +125,7 @@
       zoom: 6.5,
       zoomControl: false,
       zoomSnap: 0.25,
-      layers: [baseLayers['Terrain'],EspanaPoints]
+      layers: [baseLayers['Terrain'],overlays]
     });
 
     var layerControl = L.control.layers(baseLayers,EspanaPoints).addTo(map);
@@ -295,6 +295,7 @@ gpxFiles.forEach(fp => loadGPX(fp, Bikes));
   </script>
 </body>
 </html>
+
 
 
 
