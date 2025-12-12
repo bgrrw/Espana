@@ -1,86 +1,35 @@
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>España 2025</title>
+  <title>España 2025 — Refactor</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  
-  <!-- Pacifico font -->
-  <link href='https://fonts.googleapis.com/css?family=Pacifico' rel='stylesheet'>
-  <!-- Leaflet -->
+
+  <!-- Fonts + Leaflet -->
+  <link href="https://fonts.googleapis.com/css?family=Pacifico" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
 
-  <!-- Omnivore for GPX/KML/CSV reading -->
+  <!-- Omnivore for GPX reading -->
   <script src="https://api.tiles.mapbox.com/mapbox.js/plugins/leaflet-omnivore/v0.3.1/leaflet-omnivore.min.js"></script>
 
-  <!-- jQuery + PapaParse for CSV marker placeholders -->
+  <!-- jQuery + PapaParse (CSV) -->
   <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.0/papaparse.min.js"></script>
 
-  <!-- Map credit -->
+  <!-- Map credit control (your local file) -->
   <script type="text/javascript" src="dist/leaflet-control-credits.js"></script>
   <link rel="stylesheet" href="dist/leaflet-control-credits.css" />
 
   <style>
-  body { margin:0; padding:0; }
-  #map { position: absolute; top:0; bottom:0; right:0; left:0; }
-  #map-title { position: relative; margin-top: 10px; margin-left: 50px; float: left; background: white; border: 2px solid rgba(0,0,0,0.2); padding: 6px 8px; font-family: 'Brush Script MT', cursive; font-weight: bold; font-size: 24px; z-index: 800; }
-	  
-  h1.popup {
-      color: #191900;
-      text-align: left;
-      font-family: 'Roboto Slab';
-      font-size: 12px;
-      margin-top: 0;
-      margin-bottom: 0;
-  }
- 
-  p.popup {
-    margin-top: 0;
-    margin-bottom: 0;
-  }
-  /* Make the tooltip background slightly transparent and text bold */
-  .leaflet-tooltip {
-      background-color: rgba(0, 0, 0, 0.7) !important; /* Slightly transparent black background */
-      color: white; /* White text */
-      font-size: 14px;
-      font-weight: bold; /* Bold text */
-      border: 2px solid white; /* Optional: Add a white border */
-      pointer-events: none; /* Ensure the tooltip does not block interactions */
-  }
-  /* Increase padding inside the tooltip */
-  .leaflet-tooltip-content {
-      padding: 5px 5px; /* Adjust padding as needed */
-  }
-	  
-  #title-pane {
-  position: absolute;
-  position: absolute;
-  margin-left: auto;
-  margin-right: auto;
-  left: 0;
-  right: 0;
-  text-align: center;
-  z-index: 400;
-  font-family: "PACIFICO";
-  font-size: 30px;
-  color: white;
-  text-shadow: 2px 2px 20px red;
-  }
-
-  #ActivitySelect {
-  position: absolute;
-  z-index: 400;
-  }	  
-	  
-  .popupImage {
-    max-width: 200px;
-  }
-
-  @media (hover: none) {
-    .leaflet-tooltip-pane { display: none; }
-  }
+    body { margin:0; padding:0; }
+    #map { position: absolute; top:0; bottom:0; right:0; left:0; }
+    #title-pane { position: absolute; left:0; right:0; text-align:center; z-index:400; font-family:Pacifico; font-size:30px; color:white; text-shadow: 2px 2px 20px red; }
+    .popupImage { max-width:200px; display:block; }
+    h1.popup { font-family: 'Roboto Slab'; font-size:14px; margin:0 0 6px 0; }
+    .leaflet-tooltip { background-color: rgba(0,0,0,0.7) !important; color: white; font-size:14px; font-weight:700; border:2px solid white; pointer-events:none; }
+    .leaflet-tooltip-content{ padding:4px 6px; }
+    @media (hover: none) { .leaflet-tooltip-pane { display: none; } }
   </style>
 </head>
 <body>
@@ -89,218 +38,196 @@
 
   <script>
     // ------------------------------
-    // Basic map + base layers
+    // Utilities
     // ------------------------------
-    // Function to detect if the device is a touch device
     function isTouchDevice() {
       return ('ontouchstart' in window || navigator.maxTouchPoints > 0) && window.innerWidth <= 1024;
     }
-	  
-    var Icon = L.Icon.extend({
+
+    // Simple helper to create icons with sane defaults and fallback size
+    var BaseIcon = L.Icon.extend({
       options: {
-        iconSize:     [32, 32],
-	iconAnchor:   [16, 32],
-	popupAnchor:  [0, -32]
-	}
+        iconSize: [32,32],
+        iconAnchor: [16,32],
+        popupAnchor: [0,-30]
+      }
     });
-	
+
+    // You can replace these URLs with your local asset paths
+    var CampIcon = new BaseIcon({ iconUrl: 'tent.png' });
+    var StartIcon = new BaseIcon({ iconUrl: 'home.png' });
+    var AccommodationIcon = new BaseIcon({ iconUrl: 'Icons/accomodation.png' });
+    var POIIcon = new BaseIcon({ iconUrl: 'point-of-interest.png' });
+    var BorderIcon = new BaseIcon({ iconUrl: 'border.png' });
+    var EndIcon = new BaseIcon({ iconUrl: 'end.png' });
+
+    // ------------------------------
+    // Base layers
+    // ------------------------------
     var baseLayers = {
-	'Terrain': L.tileLayer('http://{s}.google.com/vt/lyrs=p&x={x}&y={y}&z={z}',{
-		maxZoom: 20,
-		subdomains:['mt0','mt1','mt2','mt3']
-	}),
-	'Imagery': L.tileLayer('http://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{
-	    maxZoom:20
-	})
+      'Terrain': L.tileLayer('http://{s}.google.com/vt/lyrs=p&x={x}&y={y}&z={z}', { maxZoom:20, subdomains:['mt0','mt1','mt2','mt3'] }),
+      'Imagery': L.tileLayer('http://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom:20 })
     };
 
-	var EspanaPoints = L.layerGroup()
-
-	var overlays = {
-	'Accomodation<img src="Icons/accomodation.png" style="width:32px;height:32px;">': EspanaPoints
+    // ------------------------------
+    // Overlays: separate layer groups per type (Option B)
+    // ------------------------------
+    var Layers = {
+      'Routes': L.layerGroup(),
+      'Camps <img src="tent.png" width="18" style="vertical-align:middle; margin-left:6px;">': L.layerGroup(),
+      'Accommodation <img src="Icons/accomodation.png" width="18" style="vertical-align:middle; margin-left:6px;">': L.layerGroup(),
+      'Attractions <img src="point-of-interest.png" width="18" style="vertical-align:middle; margin-left:6px;">': L.layerGroup(),
+      'Borders <img src="border.png" width="18" style="vertical-align:middle; margin-left:6px;">': L.layerGroup(),
+      'Starts/Ends <img src="home.png" width="18" style="vertical-align:middle; margin-left:6px;">': L.layerGroup(),
+      'Other': L.layerGroup()
     };
 
-    const map = L.map('map', {
-      center: [40.0, -3.7], // centered roughly over Spain; adjust as needed
+    // Keep references to the groups we will populate programmatically
+    var RoutesLayer = Layers['Routes'];
+    var CampsLayer = Layers['Camps <img src="tent.png" width="18" style="vertical-align:middle; margin-left:6px;">'];
+    var AccommodationLayer = Layers['Accommodation <img src="Icons/accomodation.png" width="18" style="vertical-align:middle; margin-left:6px;">'];
+    var AttractionsLayer = Layers['Attractions <img src="point-of-interest.png" width="18" style="vertical-align:middle; margin-left:6px;">'];
+    var BordersLayer = Layers['Borders <img src="border.png" width="18" style="vertical-align:middle; margin-left:6px;">'];
+    var StartsEndsLayer = Layers['Starts/Ends <img src="home.png" width="18" style="vertical-align:middle; margin-left:6px;">'];
+    var OtherLayer = Layers['Other'];
+
+    // ------------------------------
+    // Map initialization
+    // ------------------------------
+    var map = L.map('map', {
+      center: [40.0, -3.7],
       zoom: 6.5,
       zoomControl: false,
       zoomSnap: 0.25,
-      layers: [baseLayers['Terrain'],overlays]
+      layers: [ baseLayers['Terrain'], RoutesLayer, CampsLayer, AccommodationLayer, AttractionsLayer, BordersLayer, StartsEndsLayer, OtherLayer ]
     });
 
-    var layerControl = L.control.layers(baseLayers,EspanaPoints).addTo(map);
+    // Layer control needs an object for overlays (the Labels in the Layers object are keys)
+    L.control.layers(baseLayers, Layers).addTo(map);
 
-    L.controlCredits({
-	    imageurl: 'Icons/logo.png',
-	    tooltip: 'Brad Garrow',
-	    imagealt: 'None',
-	    width: '30px',
-	    height: '30px',
-	    expandcontent: 'Mapping by <br/>Brad Garrow',
-    }).addTo(map);
-
-	const Bikes = L.layerGroup().addTo(map);
+    // Optional credits control (your local file)
+    L.controlCredits({ imageurl: 'Icons/logo.png', tooltip: 'Brad Garrow', imagealt: 'None', width: '30px', height: '30px', expandcontent: 'Mapping by <br/>Brad Garrow' }).addTo(map);
 
     // ------------------------------
-    // GPX loading
+    // GPX loading helper (routes -> RoutesLayer)
     // ------------------------------
     const gpxFiles = [
-      'GPX/Day1.gpx',
-      'GPX/Day2.gpx',
-      'GPX/Day3.gpx',
-      'GPX/Day4.gpx',
-      'GPX/Day5.gpx',
-      'GPX/Day6.gpx',
-      'GPX/Day7.gpx',
-      'GPX/Day8.gpx',
-      'GPX/Day9.gpx'
+      'GPX/Day1.gpx', 'GPX/Day2.gpx', 'GPX/Day3.gpx', 'GPX/Day4.gpx', 'GPX/Day5.gpx', 'GPX/Day6.gpx', 'GPX/Day7.gpx', 'GPX/Day8.gpx', 'GPX/Day9.gpx'
     ];
 
-    /**
-     * loadGPX(filePath, targetLayer)
-     * - Uses omnivore to load a GPX file and add it to the provided targetLayer.
-     * - Binds a popup to the track using the internal GPX name (feature.properties.name).
-     * - Adds click highlight behavior and simple tooltip on hover.
-     */
-function loadGPX(filePath, targetLayer) {
-  // omnivore.gpx returns a layerGroup (fires 'ready' when parsed)
-  const gpxLayer = omnivore.gpx(filePath);
+    function loadGPX(filePath, targetLayer) {
+      const gpxLayer = omnivore.gpx(filePath);
 
-  gpxLayer.on('ready', function() {
+      gpxLayer.on('ready', function() {
+        this.eachLayer(function(layer) {
+          if (layer.setStyle) {
+            layer.setStyle({ color: '#e41a1c', weight: 2, opacity: 1 });
+          }
 
-    this.eachLayer(function(layer) {
+          const name = (layer.feature && layer.feature.properties && layer.feature.properties.name) ? layer.feature.properties.name : filePath;
 
-      // ----- BASELINE STYLE (apply to all polylines) -----
-      if (layer.setStyle) {
-        layer.setStyle({
-          color: '#e41a1c',      // <-- default line color
-          weight: 2,             // <-- default width
-          opacity: 1,
+          layer.bindPopup('<h1 class="popup">' + name + '</h1>');
+
+          layer.on('mouseover', function() { if (!layer._tooltip) layer.bindTooltip(name, { direction: 'center' }).openTooltip(); });
+          layer.on('mouseout', function() { if (layer._tooltip) layer.closeTooltip(); });
+
+          layer.on('click', function() {
+            if (layer.setStyle) {
+              layer.setStyle({ color: '#70F3FF', weight: 5 });
+              setTimeout(function() { layer.setStyle({ color: '#e41a1c', weight: 2 }); }, 3000);
+            }
+            layer.openPopup();
+          });
         });
-      }
-      // ---------------------------------------------------
 
-      // Try to read the name from GPX internals:
-      const name = (layer.feature && layer.feature.properties && layer.feature.properties.name)
-        ? layer.feature.properties.name
-        : filePath;
-
-      // Popup
-      layer.bindPopup('<h1>' + name + '</h1>', { maxWidth: 400 });
-
-      // Tooltip (simple hover)
-      layer.on('mouseover', function() {
-        if (!layer._tooltip) layer.bindTooltip(name, { direction: 'center' }).openTooltip();
-      });
-      layer.on('mouseout', function() {
-        if (layer._tooltip) layer.closeTooltip();
+        targetLayer.addLayer(this);
       });
 
-      // Click highlight
-      layer.on('click', function() {
-        if (layer.setStyle) {
-          layer.setStyle({ color: '#70F3FF', weight: 5 });
+      gpxLayer.on('error', function(err) { console.warn('Failed loading GPX:', filePath, err); });
 
-          // Restore baseline style after 3s
-          setTimeout(function() {
-            layer.setStyle({ color: '#e41a1c', weight: 2 });
-          }, 3000);
+      return gpxLayer;
+    }
+
+    // Load GPX files into the Routes layer
+    gpxFiles.forEach(fp => loadGPX(fp, RoutesLayer));
+
+    // ------------------------------
+    // CSV-point loader (EspañaPoints.csv)
+    // ------------------------------
+    // Expected fields: Latitude, Longitude, Name, PIC_URL, Point_Type
+    $.get('EspañaPoints.csv', function(csvString) {
+      var data = Papa.parse(csvString, { header:true, dynamicTyping:true }).data;
+
+      data.forEach(function(row) {
+        if (!row || typeof row.Latitude !== 'number' || typeof row.Longitude !== 'number') return; // skip bad rows
+
+        var icon = EndIcon; // default
+        var target = OtherLayer;
+        var popupHtml = '';
+
+        // Map CSV Point_Type values to icons & layers (keeps your original types)
+        switch ((row.Point_Type || '').trim()) {
+          case 'Camp':
+            icon = CampIcon; target = CampsLayer;
+            popupHtml = '<h1 class="popup">' + (row.Name || '') + '</h1>' + (row.PIC_URL ? '<a href="'+row.PIC_URL+'" target="_blank"><img src="'+row.PIC_URL+'" class="popupImage" onerror="this.style.display=\'none\'"/></a>' : '');
+            break;
+          case 'Start':
+            icon = StartIcon; target = StartsEndsLayer;
+            // Example: if you want to show a video for Start rows, keep your logic; here we default to image or name
+            popupHtml = '<h1 class="popup">' + (row.Name || '') + '</h1>' + (row.PIC_URL ? '<a href="'+row.PIC_URL+'" target="_blank"><img src="'+row.PIC_URL+'" class="popupImage" onerror="this.style.display=\'none\'"/></a>' : '');
+            break;
+          case 'Attraction':
+            icon = POIIcon; target = AttractionsLayer;
+            popupHtml = '<h1 class="popup">' + (row.Name || '') + '</h1>' + (row.PIC_URL ? '<a href="'+row.PIC_URL+'" target="_blank"><img src="'+row.PIC_URL+'" class="popupImage" onerror="this.style.display=\'none\'"/></a>' : '');
+            break;
+          case 'Accommodation':
+            icon = AccommodationIcon; target = AccommodationLayer;
+            popupHtml = '<h1 class="popup">' + (row.Name || '') + '</h1>' + (row.PIC_URL ? '<a href="'+row.PIC_URL+'" target="_blank"><img src="'+row.PIC_URL+'" class="popupImage" onerror="this.style.display=\'none\'"/></a>' : '');
+            break;
+          case 'Border':
+            icon = BorderIcon; target = BordersLayer;
+            popupHtml = '<h1 class="popup">' + (row.Name || '') + '</h1>' + (row.PIC_URL ? '<a href="'+row.PIC_URL+'" target="_blank"><img src="'+row.PIC_URL+'" class="popupImage" onerror="this.style.display=\'none\'"/></a>' : '');
+            break;
+          case 'End':
+            icon = EndIcon; target = StartsEndsLayer;
+            popupHtml = '<h1 class="popup">' + (row.Name || '') + '</h1>' + (row.PIC_URL ? '<a href="'+row.PIC_URL+'" target="_blank"><img src="'+row.PIC_URL+'" class="popupImage" onerror="this.style.display=\'none\'"/></a>' : '');
+            break;
+          default:
+            // anything else falls into Other
+            icon = EndIcon; target = OtherLayer;
+            popupHtml = '<h1 class="popup">' + (row.Name || 'Untitled') + '</h1>' + (row.PIC_URL ? '<a href="'+row.PIC_URL+'" target="_blank"><img src="'+row.PIC_URL+'" class="popupImage" onerror="this.style.display=\'none\'"/></a>' : '');
         }
 
-        layer.openPopup();
+        var marker = L.marker([row.Latitude, row.Longitude], { icon: icon, opacity: 1 });
+
+        marker.bindPopup(popupHtml, { maxWidth: 400 });
+
+        // Tooltip on hover
+        marker.on('mouseover', function() { marker.openTooltip(); });
+        marker.on('mouseout', function() { marker.closeTooltip(); });
+        marker.bindTooltip((row.Name || ''), { direction: 'top', permanent: false, className: 'leaflet-tooltip' });
+
+        // Add to the appropriate group (not map directly)
+        target.addLayer(marker);
       });
 
-    });
+    }).fail(function() { console.warn('Failed to load EspañaPoints.csv'); });
 
-    // Add parsed GPX to target layer group
-    targetLayer.addLayer(this);
-  });
-
-  gpxLayer.on('error', function(err) {
-    console.warn('Failed loading GPX:', filePath, err);
-  });
-
-  return gpxLayer;
-}
-
-// Load all GPX files
-gpxFiles.forEach(fp => loadGPX(fp, Bikes));
-
-//---------
-// POINTS
-//---------	  
-	  
-// Point Layes
-    var CampIcon = new Icon({iconUrl: 'tent.png'});
-    var StartIcon = new Icon({iconUrl: 'home.png'});
-    var AccomodationIcon = new Icon({iconUrl: 'Icons/accomodation.png'});
-    var POIICon = new Icon({iconUrl: 'point-of-interest.png'});
-
-// Read markers data from data.csv
-    $.get('EspañaPoints.csv', function(csvString) {
-    // Use PapaParse to convert string to array of objects
-      var data = Papa.parse(csvString, {header: true, dynamicTyping: true}).data;
-      // For each row in data, create a marker and add it to the map
-      // For each row, columns `Latitude`, `Longitude`, and `Title` are required
-      for (var i in data) {
-        var row = data[i];
-        if (row.Point_Type == 'Camp') {
-            var icon = CampIcon;
-	    	var popuptxt = "<h1>" + row.Name +"</h1><a href='" + row.PIC_URL + "'><img src='" + row.PIC_URL + "'" + " onerror=this.style.display='none' class=popupImage " + "/>"
-        } else if (row.Point_Type == 'Start') {
-            var icon = StartIcon;
-	    	var popuptxt = '<video width="320" controls autoplay><source src="RoadTrip.mp4"></source></video>'
-	  	} else if (row.Point_Type == 'Attraction') {
-	    	var icon = POIICon;
-	    	var popuptxt = "<h1>" + row.Name +"</h1><a href='" + row.PIC_URL + "'><img src='" + row.PIC_URL + "'" + " onerror=this.style.display='none' class=popupImage " + "/>"
-	  	} else if (row.Point_Type == 'Accommodation') {
-	    	var icon = AccomodationIcon;
-	    	var popuptxt = "<h1>" + row.Name +"</h1><a href='" + row.PIC_URL + "'><img src='" + row.PIC_URL + "'" + " onerror=this.style.display='none' class=popupImage " + "/>"
-	  	} else if (row.Point_Type == 'Border') {
-	    	var icon = BorderIcon;
-	    	var popuptxt = "<h1>" + row.Name +"</h1><a href='" + row.PIC_URL + "'><img src='" + row.PIC_URL + "'" + " onerror=this.style.display='none' class=popupImage " + "/>"
-        } else {
-	    	var icon = EndIcon;
-	    	var popuptxt = "<h1>" + row.Name +"</h1><a href='" + row.PIC_URL + "'><img src='" + row.PIC_URL + "'" + " onerror=this.style.display='none' class=popupImage " + "/>"
-	  	};   
-	      
-      var Markers = L.marker([row.Latitude, row.Longitude], {
-	  	icon: icon,
-	  	opacity: 1
-      }).bindPopup(
-	  	popuptxt, {
-	   		maxWidth: "auto"
-        }).addTo(EspanaPoints);
-      }
-    });
-	  
     // ------------------------------
-    // Helpful notes for you
+    // Optional: fit map to loaded content once everything is ready
     // ------------------------------
-    // - GPX name used for popups: layer.feature.properties.name (this is read from within the GPX file)
-    // - If your GPX files contain <trk><name> or <rte><name>, omnivore/gpx will expose them as feature.properties.name
-    // - If you move away from GitHub Pages to a host that exposes directory listings:
-    //     replace the hard-coded gpxFiles array with a fetch of the directory listing (and build the array)
-    // - Update the CSV file paths above when you have real CSVs. The loadCSVMarkers function expects
-    //     columns: Latitude, Longitude, Name, PIC_URL (adjust as required)
-    // - To change which layer a GPX file goes into (e.g., Bikes instead of Hikes), call loadGPX(fp, Bikes)
-    // - If you want different default styles per activity, apply layer.eachLayer(...) and set polyline style
-    //
-    // Example: convert a GPX into a 'Bikes' layer with a different style
-    // loadGPX('GPX/bike_route.gpx', Bikes).on('ready', function() {
-    //   this.eachLayer(function(l){ if (l.setStyle) l.setStyle({color:'#ff7f00', weight:2}); });
-    // });
+    function fitToContent() {
+      var group = L.featureGroup();
+      // gather layers that are visible
+      [RoutesLayer, CampsLayer, AccommodationLayer, AttractionsLayer, BordersLayer, StartsEndsLayer, OtherLayer].forEach(function(g) {
+        g.eachLayer(function(l){ group.addLayer(l); });
+      });
+      if (group.getLayers().length) map.fitBounds(group.getBounds().pad(0.1));
+    }
+
+    // Try to fit after a short delay (give CSV/GPX time to load)
+    setTimeout(fitToContent, 1500);
 
   </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
