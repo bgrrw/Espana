@@ -137,9 +137,14 @@
       'Other': L.layerGroup()
     };
 
+	var Tracks = {
+	  'Biking': L.layerGroup(),
+	  'Train': L.layerGroup()
+	};
+
     // Keep references to the groups we will populate programmatically
-    var BikeLayer = Layers['Biking'];
-	var TrainLayer = Layers['Train'];
+    var BikeLayer = Tracks['Biking'];
+	var TrainLayer = Tracks['Train'];
     var CampsLayer = Layers['Camps <img src="Icons/accomodation.png" width="18" style="vertical-align:middle; margin-left:6px;">'];
     var AccommodationLayer = Layers['Accommodation <img src="Icons/accomodation.png" width="18" style="vertical-align:middle; margin-left:6px;">'];
     var AttractionsLayer = Layers['Attractions <img src="Icons/accomodation.png" width="18" style="vertical-align:middle; margin-left:6px;">'];
@@ -377,6 +382,7 @@
   </script>
 </body>
 </html>
+
 
 
 
